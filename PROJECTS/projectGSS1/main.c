@@ -3,10 +3,11 @@
   * @file    main.c 
   * @author  GSS Team
   * @version V1.0.0
-  * @date    2013
+  * @date    3-2013
   * @brief   Main program body
   ******************************************************************************
   * @attention
+  *
   * Ma chuong trinh dieu khien robot G1 cho he thong Robot phun thuoc BVTV
   * <h2><center>&copy; COPYRIGHT 2012 Gremsy Co., Ltd</center></h2>
   ******************************************************************************  
@@ -158,7 +159,12 @@ int main(void){
   }
 }
 
-/*function main ----------------------------------------*/
+/**
+	@void: mainTest
+	@para: none.
+	@returnVar: none.
+	@function: test cac ham process trong main.
+*/
 void mainTest(void){
 	if(flag[0] == TRUE){
 			if(CheckDataRxUI() == TRUE) 	GPIO_SetBits(GPIOD, GPIO_Pin_14);
@@ -192,6 +198,12 @@ void mainTest(void){
 	delayMs(SCAN_MAIN_TEST);
 }
 
+/**
+	@void: mainRun
+	@para: none.
+	@returnVar: none.
+	@function: chua cac ham process trong main.
+*/
 void mainRun(void){
 		if(flag[0] == TRUE){
   			if(CheckDataRxUI() == TRUE) 	GPIO_SetBits(GPIOD, GPIO_Pin_14);
@@ -201,48 +213,8 @@ void mainRun(void){
 		}
 		
 		if(flag[START_MAIN] == TRUE){
-			flag[TEST] = FALSE;
-			if(count[MAIN] % 300 == 0) GPIO_ToggleBits(GPIOA, GPIO_Pin_6);		
-			/*read SW Begin & End -----------------------------------------------------------------
-				PORTD -> pin0 -> END
-							-> pin1 -> BEGIN
-			*/
-// 			if(count[MAIN]%10 == 0) findSetpointST(rxBufLaser[LASER_FORNT],rxBufLaser[LASER_BACK]);
-// 			controlMD();
-// 			controlSTL();
-// 			controlSTR();
-			
-			if(GPIO_ReadInputDataBit(PORT_SW,PIN_SW_END) == 0){
-			}
-			else if(GPIO_ReadInputDataBit(PORT_SW,PIN_SW_BEGIN) == 0){
-					GPIO_ResetBits(GPIOD, GPIO_Pin_2);
-					flag[8] = TRUE;
-			}
-			else if(GPIO_ReadInputDataBit(PORT_SW,PIN_SW_BEGIN) == 1 && flag[8] == TRUE){
-					TIM_Cmd(TIM4, ENABLE);
-					Motor[MDRIVER].dir = CW;
-					flag[8] = FALSE;
-			}
-			/* read data slave --------------------------------------------------------------------*/
-			if((count[MAIN] % 5) == 0){
-				if(slectedLaser == LASER_BACK){
-					/*truyen cho slaver laser truoc*/
-					putCharUsart(ADDRESS_SLAVE_LASER_F, USART3);	/*truyen dia chi cho slave laser truoc*/
-					slectedLaser = LASER_FORNT;
-				}else if(slectedLaser == LASER_FORNT){
-					/*truyen cho slave laser sau*/
-					putCharUsart(ADDRESS_SLAVE_LASER_B, USART3);	/*truyen dia chi cho slave laser sau*/
-					slectedLaser = LASER_BACK;
-				}
-			}
 		}
-		else{
-			Motor[0].pwm = 0;
-			Motor[1].pwm = 0;
-			Motor[2].pwm = 0;
-			controlMotor(Motor[0]);
-			controlMotor(Motor[1]);
-			controlMotor(Motor[2]);			
+		else{		
 		}
 		
 		if(count[MAIN]%50 == 0){
@@ -251,6 +223,7 @@ void mainRun(void){
 			else													TIM11->CCR1 = 0;
 		}
 		
+		/**/
  		if(count[MAIN]%300 == 0){
 			if(flag[TX_EN] == TRUE)	txComputer(pointTX);
  		}
@@ -258,6 +231,16 @@ void mainRun(void){
 }
 
 /* function support ------------------------------------*/
+/**
+	@void: initPID
+	@para: none.
+	@returnVar: none.
+	@fuction: cai dat cac PID:
+											- posPID( motor driver)
+											- velocityPID( motor driver)
+											- stR_PID( motor steering right)
+											- stL_PID( motor steering left)
+*/
 void initPID(void){
 	PIDInit(&velocityPID);
 	velocityPID.ABCcoeff = &ABCcoeff[0][0];
@@ -281,10 +264,15 @@ void initPID(void){
 	
 	stR_PID.controlReference = MID_STR;
 	stL_PID.controlReference = MID_STL;
-//	flag[LASER_LOST] = TRUE;
-
 }
 
+/**
+	@void: configMotor
+	@para: none.
+	@returnVar: none.
+	@fuction: - config pwms cho cac motor
+					 - Set id hoat dong cho tung motor.	
+*/
 void configMotor(void){
 	MotorConfig();
 	Motor[MDRIVER].id = md;
@@ -292,6 +280,14 @@ void configMotor(void){
 	Motor[MSTEERING_R].id = msr;
 }
 
+/**
+	@void: controlMD
+	@para: none.
+	@returnVar: none.
+	@fuction: dieu khien motor Driver theo PID Conttrol.
+						- velocity
+						- position
+*/
 void controlMD(void){
 	count[9]++;
 	
@@ -309,7 +305,6 @@ void controlMD(void){
 	controlMotor(Motor[MDRIVER]);
 	
 	if(count[9]%10 == 0){
-		if(flag[LASER_LOST] == FALSE){
 			/* control theo vi tri --------------------------------------*/
 			posPID.measureOutput = countEncoder;
 			velocitySet = PID(&posPID);
@@ -324,13 +319,15 @@ void controlMD(void){
 
 			if(velocitySet > garden.V) velocitySet = garden.V;
 			velocityPID.controlReference = (double)velocitySet;
-		}
-		else{
-			/* mat tin hieu laser */
-			laserLost();
-		}
 	}
 }
+
+/**
+	@void: controlSTL
+	@para: none.
+	@returnVar: none.
+	@fuction: dieu khien motor steering left theo PID Conttrol
+*/
 void controlSTL(void){
 	stL_PID.measureOutput = readAdc(ADC_ANGLE_L);
 
@@ -352,6 +349,12 @@ void controlSTL(void){
 	controlMotor(Motor[MSTEERING_L]);	
 }
 
+/**
+	@void: controlSTR
+	@para: none.
+	@returnVar: none.
+	@fuction: dieu khien motor steering right theo PID Conttrol
+*/
 void controlSTR(void){
 	stR_PID.measureOutput = readAdc(ADC_ANGLE_R);
 	pwmPID[2] = PID(&stR_PID);
@@ -372,11 +375,11 @@ void controlSTR(void){
 	controlMotor(Motor[MSTEERING_R]);	
 }
 
-/*
+/**
 	@void: laserLost.
 	@para: none.
-	@return var: none.
-	fuction: ham xu li khi mat tin hieu laser.
+	@returnVar: none.
+	@fuction: ham xu li khi mat tin hieu laser.
 */
 void laserLost(void){
 	if(vCurrent == 0){
@@ -386,12 +389,14 @@ void laserLost(void){
 		velocityPID.controlReference = 0;
 	}
 }
-/*math fuction------------------------------------------*/
-double ABS(double a){
-	if(a<0) return -a;
-	else		return a;
-}
 
+/**
+	@void: findSetpointST
+	@para: int ratioF
+				 int ratioB
+	@returnVar: none.
+	@fuction: ham tim setpoint cho hai dong steering va control motor driver
+*/
 void findSetpointST(int ratioF,int ratioB){
 	int value_angle_steering;
 	int setpointSTR,setpointSTL;
@@ -413,12 +418,9 @@ void findSetpointST(int ratioF,int ratioB){
 			stL_PID.controlReference = (double)setpointSTL;
 			
 			flag[LASER_LOST] = FALSE;
-//			posPID.controlReference = (double)(rxUI.rxData[2]*PULSE_RATIO);
-//			countEncoderOld =countEncoder;
 		}
 		else{
 			flag[LASER_LOST] = TRUE;
-//		posPID.controlReference = countEncoderOld + 1200;
 		}
 	}else{
 		value_angle_steering = b*5 + (b - a)*2;
@@ -434,23 +436,44 @@ void findSetpointST(int ratioF,int ratioB){
 			stL_PID.controlReference = setpointSTL;
 			
 			flag[LASER_LOST] = FALSE;
-//			posPID.controlReference = (double)(rxUI.rxData[2]*PULSE_RATIO);
-//			countEncoderOld =countEncoder;
 		}
 		else{
-//			posPID.controlReference = countEncoderOld + 1200;
 			flag[LASER_LOST] = TRUE;
 		}
 	}
 }
 
-/* USART--------------*/
+/**
+	@void: ABS
+	@para: doble a
+	@returnVar: double |a|
+	@fuction: tra ve gia tri ko am cho so dua vao.
+*/
+double ABS(double a){
+	if(a<0) return -a;
+	else		return a;
+}
+
+/**
+	@void: delRxUI
+	@para: none
+	@returnVar: none.
+	@fuction: xoa cac phan tu trong mang rxUI.rxData[]
+*/
 void delRxUI(void){
 	while(rxUI.point != 0){
 		rxUI.rxData[rxUI.point--] = '\0';
 	}
 }
 
+/**
+	@void: CheckDataRxUI
+	@para: none
+	@returnVar: Bit(TRUE,FALSE)
+	@fuction: - kiem tra du lieu truyen tu panel  co err hay ko? if TRUE them err
+																														else if FALSE them successful
+					 - nhap du lieu dc truyen vao cac mang da dc quy dinh
+*/
 Bit CheckDataRxUI(void){
 		Bit temp = FALSE;
 		char tempValue = 0;
@@ -459,19 +482,12 @@ Bit CheckDataRxUI(void){
 		if(rxUI.rxData[1] == 1){
 			if(rxUI.rxData[2] == 'r'){
 				TIM_Cmd(TIM4, ENABLE);
-				flag[START_MAIN] = TRUE;
-				flag[STOP_MAIN] = FALSE;
 			}
 			else if(rxUI.rxData[2] == 's'){
 				TIM_Cmd(TIM4, DISABLE);
-				flag[STOP_MAIN] = TRUE;
-				flag[START_MAIN] = FALSE;
 			}
 			else if(rxUI.rxData[2] == 't'){
 				pointTX++;
-				if(pointTX > 2) pointTX=0;
-				if(pointTX == 0) flag[TX_EN] = FALSE;
-				else flag[TX_EN] = TRUE;
 			}
 		}
 		else if(rxUI.rxData[1] == 2){
@@ -481,18 +497,10 @@ Bit CheckDataRxUI(void){
 			
 			if(tempValue == rxUI.rxData[rxUI.length]){
 				posPID.controlReference = (double)(rxUI.rxData[2]*PULSE_RATIO);garden.V = rxUI.rxData[3]*100; garden.P = rxUI.rxData[4];
-
-// 				pid[MSTEERING_L].Kp = rxUI.rxData[8];
-// 				pid[MSTEERING_L].Ki = rxUI.rxData[9];
-// 				pid[MSTEERING_L].Kd = rxUI.rxData[10];
 				
 				Kcoeff[1][0] = (double)rxUI.rxData[5]/10.0;
 				Kcoeff[1][1] = (double)rxUI.rxData[6]/1000.0;
 				Kcoeff[1][2] = (double)rxUI.rxData[7]/10.0;
-				
-// 				Kcoeff[0][0] = rxUI.rxData[14];
-// 				Kcoeff[0][1] = rxUI.rxData[15]/100.0;
-// 				Kcoeff[0][2] = rxUI.rxData[16];
 				
 				PIDCoeffCalc(&Kcoeff[1][0],&posPID);
 			}
@@ -503,7 +511,6 @@ Bit CheckDataRxUI(void){
 				tempID = rxUI.rxData[2];
 				Motor[tempID].dir = rxUI.rxData[3];
 				Motor[tempID].pwm = SPEED_MOTOR;
-				flag[TEST] = TRUE;
 			}
 			else{
 				temp = TRUE;
@@ -512,15 +519,19 @@ Bit CheckDataRxUI(void){
 		return temp;
 }
 
+/**
+	@void: txComputer
+	@para: char c
+	@returnVar: none.
+	@fuction: truyen du lieu len may tinh theo cac mode:
+						c == 0 -> dung viec truyen len may tinh
+						c == 1 -> tryen thong so thay doi, ex: ADC, laser, tx: continus
+						c == 2 -> truyen thong so set cung, ex: kp,ki,kd..., tx: onshot
+*/
 void txComputer(char c){
 	if(c == 1){
  		sprintf(txBufUsart,"ABCcoeff: %d %d\r\n",readAdc(ADC_ANGLE_L),rxBufLaser[LASER_BACK]);
- 		putStringUsart(txBufUsart,USART2);
-// 		sprintf(txBufUsart,"LF: %d   LB: %d\r\n",rxBufLaser[LASER_FORNT],rxBufLaser[LASER_BACK]);
-// 		putStringUsart(txBufUsart,USART2);
-// 		sprintf(txBufUsart,"SPEED: %d \r\n",ADCValue[ADC_SPEED]);
-// 		putStringUsart(txBufUsart,USART2);
-		
+ 		putStringUsart(txBufUsart,USART2);		
 	}
 	else if(c == 2){
 		sprintf(txBufUsart,"GARDEN-> D: %3.4f  \t V: %d \t P: %d\n",posPID.controlReference,garden.V,garden.P);
@@ -529,18 +540,16 @@ void txComputer(char c){
 		putStringUsart(txBufUsart,USART2);
 		sprintf(txBufUsart,"PPID-> Kp: %3.4f  \t Ki: %3.4f \t Kd: %3.4f\n",Kcoeff[1][0],Kcoeff[1][1],Kcoeff[1][2]);
 		putStringUsart(txBufUsart,USART2);
-		flag[TX_EN] = FALSE;
 	}
 }
 
 
 /* function interrupt*/
-/*
-	interrupt interface Usart
-		USART2
-		USART3
-*/
-/*
+/**
+	@void: USART2_IRQHandler
+	@para: none
+	@rerurnVar: none.
+	@fuction: chuong trinh duoc goi khi co du lieu duoc truyen toi
 	usart2 	interface slave 	-> computer
 														-> touch pad
 					connect portA 		-> pin2-RX
@@ -577,7 +586,11 @@ void USART2_IRQHandler(void)
 			}
 		}
 }
-/*
+/**
+	@void: USART3_IRQHandler
+	@para: none
+	@rerurnVar: none.
+	@fuction: chuong trinh duoc goi khi co du lieu duoc truyen toi
 	usart3	interface slave 	-> modul laser fornt
 														-> modul laser back
 					connect portC 		-> pin10-RX
