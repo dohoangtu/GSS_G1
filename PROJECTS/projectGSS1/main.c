@@ -1,9 +1,9 @@
 /**
   ******************************************************************************
-  * @file    IO_Toggle/main.c 
-  * @author  MCD Application Team
+  * @file    main.c 
+  * @author  GSS Team
   * @version V1.0.0
-  * @date    19-September-2011
+  * @date    2013
   * @brief   Main program body
   ******************************************************************************
   * @attention
